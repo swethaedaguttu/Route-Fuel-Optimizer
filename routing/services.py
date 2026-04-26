@@ -334,7 +334,7 @@ def plan_route_with_fuel(start: str, end: str) -> Dict:
     traveled_progress = 0.0
     remaining_route_stations = list(stations)
 
-    while haversine_miles(current_point, destination) > RANGE_MILES:
+    while (total_distance - traveled_progress) > RANGE_MILES:
         best_station: Dict = {}
         for offset_limit in ROUTE_STATION_FALLBACK_OFFSETS:
             candidates = [
@@ -351,7 +351,7 @@ def plan_route_with_fuel(start: str, end: str) -> Dict:
             if best_station:
                 break
         if not best_station:
-            partial_distance = min(total_distance, total_distance - haversine_miles(current_point, destination))
+            partial_distance = min(total_distance, max(traveled_progress, 0.0))
             raise RoutePlanningError(
                 "Route not feasible",
                 payload={
@@ -384,9 +384,10 @@ def plan_route_with_fuel(start: str, end: str) -> Dict:
             for s in remaining_route_stations
             if s["name"] != best_station["name"] or s["city"] != best_station["city"]
         ]
+    remaining_route_distance = total_distance - traveled_progress
     final_leg = haversine_miles(current_point, destination)
-    if final_leg > RANGE_MILES:
-        partial_distance = min(total_distance, total_distance - final_leg)
+    if remaining_route_distance > RANGE_MILES:
+        partial_distance = min(total_distance, max(traveled_progress, 0.0))
         raise RoutePlanningError(
             "Route not feasible",
             payload={
@@ -398,6 +399,17 @@ def plan_route_with_fuel(start: str, end: str) -> Dict:
         )
     final_leg_price = fuel_stops[-1]["price"] if fuel_stops else start_fuel_price
     total_cost += (final_leg / MPG) * final_leg_price
+
+    if total_distance > RANGE_MILES and not fuel_stops:
+        raise RoutePlanningError(
+            "Route not feasible",
+            payload={
+                "error": "Route not feasible",
+                "reason": "No fuel station within 500 miles",
+                "partial_distance": 0.0,
+                "fuel_stops_so_far": [],
+            },
+        )
 
     fuel_used_gallons = total_distance / MPG
     pricing_strategy = "fuel_stops_based" if fuel_stops else "nearest_station_to_start"
