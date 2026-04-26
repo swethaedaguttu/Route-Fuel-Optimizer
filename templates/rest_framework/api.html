@@ -1,0 +1,25 @@
+{% extends "rest_framework/base.html" %}
+
+{% block style %}
+  {{ block.super }}
+  <style>
+    /* Differentiate request vs response sections in DRF browsable API */
+    .request-info .prettyprint {
+      background-color: #eef4ff !important;
+      border-left: 4px solid #3b82f6;
+      color: #1f2937;
+    }
+
+    .response-info .prettyprint {
+      background-color: #ecfdf3 !important;
+      border-left: 4px solid #10b981;
+      color: #111827;
+    }
+
+    /* Make raw request editor visually distinct */
+    textarea[name="content"] {
+      background-color: #f8fbff;
+      border: 1px solid #93c5fd;
+    }
+  </style>
+{% endblock %}
